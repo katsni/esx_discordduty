@@ -1,20 +1,5 @@
 ESX = nil
 
-local jobs = {
-    'police', --Jos lisäät uusia jobeja lisää ne myös serveriin ja databaseen--
-    'offpolice',
-    'ambulance',
-    'offambulance',
-    'mechanic',
-    'offmechanic'
-}
-
-local coords = {
-    vector3(441.27, -981.83, 30.69), --Näillä ei ole oikeastaan väliä, toiseen versioon tulee työkohtaset coordsit.--
-    vector3(307.06, -597.57, 43.28),
-    vector3(-345.52, -123.0, 39.01)
-}
-
 Citizen.CreateThread(function()
 	while ESX == nil do
 		TriggerEvent('esx:getSharedObject', function(obj) ESX = obj end)
@@ -40,18 +25,39 @@ end)
 
 local zones = false
 
+function KolmeDTeksti(x, y, z, text)
+	local onScreen,_x,_y=World3dToScreen2d(x,y,z)
+	local factor = #text / 370
+	local px,py,pz=table.unpack(GetGameplayCamCoords())
+	
+	SetTextScale(0.35, 0.35)
+	SetTextFont(4)
+	SetTextProportional(1)
+	SetTextColour(255, 255, 255, 215)
+	SetTextEntry("STRING")
+	SetTextCentre(1)
+	AddTextComponentString(text)
+	DrawText(_x,_y)
+	DrawRect(_x,_y + 0.0125, 0.015 + factor, 0.03, 0, 0, 0, 120)
+end
+
+local paikka = {}
 
 Citizen.CreateThread(function()
     while true do
         Citizen.Wait(1000)
         local cc = GetEntityCoords(PlayerPedId())
-        for k,v in pairs(coords) do
-            local dist = #(cc-v)
-            if dist < 5 then
-                if dist < 1.2 then
-                    zones = true
-                else
-                    zones = false
+        for k,v in pairs(Config.Zones) do
+            if ESX.PlayerData.job and ESX.PlayerData.job.name == v.Job then
+                local dist = #(cc - v.Coords)
+                paikka = v.Coords
+
+                if dist < 5 then
+                    if dist < 1.2 then
+                        zones = true
+                    else
+                        zones = false
+                    end
                 end
             end
         end
@@ -61,16 +67,14 @@ end)
 Citizen.CreateThread(function()
     while true do
         Citizen.Wait(0)
-        for ucon,tyo in pairs(jobs) do
-            if ESX.PlayerData.job and ESX.PlayerData.job.name == tyo then
-                if zones then
-                    ESX.ShowHelpNotification("Paina ~INPUT_CONTEXT~ avataksesi kellokortti")
-                    if IsControlPressed(0, 38) then
-                        Citizen.Wait(500)
-                        TriggerServerEvent("esx_kellokortti:function")
-                    end
-                end
+        if zones then
+            KolmeDTeksti(paikka.x, paikka.y, paikka.z, "E - Käytä kellokorttia")
+            if IsControlPressed(0, 38) then
+                Citizen.Wait(500)
+                TriggerServerEvent("esx_kellokortti:function")
             end
+        else
+            Citizen.Wait(200)
         end
     end
 end)
